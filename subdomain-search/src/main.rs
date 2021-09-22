@@ -6,6 +6,7 @@ use qrcodegen::QrCode;
 use qrcodegen::QrCodeEcc;
 use qrcodegen::QrSegment;
 use qrcodegen::Version;
+use rayon::prelude::*;
 
 fn count_orphans(qr: &QrCode) -> usize {
     let mut orphans = 0;
@@ -65,13 +66,18 @@ fn main() {
             .permutations(c)
             .map(|cs| cs.into_iter().collect::<String>());
 
-        let domains = subdomains.map(|sd| format!("{}.aay.tw", sd));
+        let domains: Vec<String> = subdomains.map(|sd| format!("{}.aay.tw", sd)).collect();
 
-        for domain in domains {
-            let (qr, orphans) = min_orphans_for(domain.as_str());
-            if orphans < 2 {
-                println!("{}, {:?}, {}", domain, qr.mask(), orphans);
-            }
-        }
+        let domains = domains
+            .par_iter()
+            .map(|domain| {
+                let (qr, orphans) = min_orphans_for(domain.as_str());
+                (domain, qr.mask(), orphans)
+            })
+            .for_each(|(d, qm, o)| {
+                if o < 2 {
+                    println!("{}, {:?}, {}", d, qm, o);
+                }
+            });
     }
 }
