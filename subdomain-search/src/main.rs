@@ -61,22 +61,22 @@ const DNSCHARS: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123
 
 fn main() {
     for c in 1..5 {
-        let subdomains = DNSCHARS
+        let subdomains: Vec<String> = DNSCHARS
             .chars()
             .permutations(c)
-            .map(|cs| cs.into_iter().collect::<String>());
+            .map(|cs| cs.into_iter().collect::<String>())
+            .collect();
 
-        let domains: Vec<String> = subdomains.map(|sd| format!("{}.aay.tw", sd)).collect();
-
-        let domains = domains
+        subdomains
             .par_iter()
-            .map(|domain| {
+            .map(|sd| {
+                let domain = format!("{}.aay.tw", sd);
                 let (qr, orphans) = min_orphans_for(domain.as_str());
-                (domain, qr.mask(), orphans)
+                (sd, qr.mask(), orphans)
             })
-            .for_each(|(d, qm, o)| {
+            .for_each(|(sd, qm, o)| {
                 if o < 2 {
-                    println!("{}, {:?}, {}", d, qm, o);
+                    println!("{}\t{}\t{}", sd, qm.value(), o);
                 }
             });
     }
