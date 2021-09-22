@@ -11,8 +11,8 @@ fn count_orphans(qr: &QrCode) -> usize {
     let mut orphans = 0;
 
     let n = qr.size();
-    for y in 0..n - 1 {
-        for x in 0..n - 1 {
+    for y in 0..n {
+        for x in 0..n {
             let m = qr.get_module(x, y);
 
             let left = (x != 0) && qr.get_module(x - 1, y);
@@ -59,10 +59,10 @@ fn min_orphans_for(data: &str) -> (QrCode, usize) {
 const DNSCHARS: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
 
 fn main() {
-    for c in 1..4 {
+    for c in 1..5 {
         let subdomains = DNSCHARS
             .chars()
-            .combinations(c)
+            .permutations(c)
             .map(|cs| cs.into_iter().collect::<String>());
 
         let domains = subdomains.map(|sd| format!("{}.aay.tw", sd));
