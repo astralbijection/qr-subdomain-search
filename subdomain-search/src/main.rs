@@ -10,15 +10,17 @@ use qrcodegen::Version;
 fn count_orphans(qr: &QrCode) -> usize {
     let mut orphans = 0;
 
-    for y in 1..qr.size() - 1 {
-        for x in 1..qr.size() - 1 {
+    let n = qr.size();
+    for y in 0..n - 1 {
+        for x in 0..n - 1 {
             let m = qr.get_module(x, y);
 
-            if qr.get_module(x - 1, y) != m
-                && qr.get_module(x, y - 1) != m
-                && qr.get_module(x + 1, y) != m
-                && qr.get_module(x, y + 1) != m
-            {
+            let left = (x != 0) && qr.get_module(x - 1, y);
+            let above = (y != 0) && qr.get_module(x, y - 1);
+            let right = (x != n - 1) && qr.get_module(x + 1, y);
+            let below = (y != n - 1) && qr.get_module(x, y + 1);
+
+            if (above != m) && (below != m) && (right != m) && (left != m) {
                 orphans += 1;
             }
         }
@@ -27,11 +29,11 @@ fn count_orphans(qr: &QrCode) -> usize {
     orphans
 }
 
-fn min_orphans_for(data: &str) -> QrCode {
+fn min_orphans_for(data: &str) -> (QrCode, usize) {
     let chrs: Vec<char> = data.chars().collect();
     let segs = QrSegment::make_segments(&chrs);
 
-    (0..8)
+    let qrs: Vec<(QrCode, usize)> = (0..8)
         .map(|mask| {
             let qr = QrCode::encode_segments_advanced(
                 &segs,
@@ -42,27 +44,34 @@ fn min_orphans_for(data: &str) -> QrCode {
                 false,
             )
             .unwrap();
-            qr
+
+            let orphans = count_orphans(&qr);
+            (qr, orphans)
         })
-        .min_by_key(|qr| count_orphans(&qr))
+        .collect();
+
+    qrs.iter()
+        .min_by_key(|(_qr, orphans)| orphans)
         .unwrap()
+        .clone()
 }
 
 const DNSCHARS: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
 
 fn main() {
-    let subdomains = DNSCHARS
-        .chars()
-        .combinations(3)
-        .map(|cs| cs.into_iter().collect::<String>());
+    for c in 1..4 {
+        let subdomains = DNSCHARS
+            .chars()
+            .combinations(c)
+            .map(|cs| cs.into_iter().collect::<String>());
 
-    let domains = subdomains.map(|sd| format!("{}.aay.tw", sd));
+        let domains = subdomains.map(|sd| format!("{}.aay.tw", sd));
 
-    for domain in domains {
-        let qr = min_orphans_for(domain.as_str());
-        let orphans = count_orphans(&qr);
-        if orphans < 4 {
-            println!("{}, {:?}, {}", domain, qr.mask(), orphans);
+        for domain in domains {
+            let (qr, orphans) = min_orphans_for(domain.as_str());
+            if orphans < 2 {
+                println!("{}, {:?}, {}", domain, qr.mask(), orphans);
+            }
         }
     }
 }
