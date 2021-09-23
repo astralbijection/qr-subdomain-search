@@ -57,27 +57,58 @@ fn min_orphans_for(data: &str) -> (QrCode, usize) {
         .clone()
 }
 
-const DNSCHARS: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-";
+const DNSCHARS: [char; 37] = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+    't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-',
+];
+
+fn generate_domain(base: &str, max_len: usize) -> String {
+    use rand::prelude::*;
+    let mut rng = thread_rng();
+
+    let append_len = rng.gen_range(1..(max_len - base.len()));
+    let mut subdomain_len = rng.gen_range(0..append_len);
+
+    // Host cannot start with '.' so .foo.com is out
+    if subdomain_len > 0 {
+        subdomain_len += 1;
+    }
+    let path_len = append_len - subdomain_len;
+
+    let mut chars = Vec::new();
+
+    if subdomain_len > 0 {
+        chars.extend(DNSCHARS.choose_multiple(&mut rng, subdomain_len));
+        chars.push('.');
+    }
+
+    chars.extend(base.chars());
+
+    if path_len > 0 {
+        chars.push('/');
+        chars.extend(DNSCHARS.choose_multiple(&mut rng, path_len));
+    }
+
+    for i in 0..chars.len() {
+        if rng.gen_ratio(1, 2) {
+            chars[i] = chars[i].to_uppercase().collect::<Vec<_>>()[0];
+        }
+    }
+
+    chars.into_iter().collect()
+}
 
 fn main() {
-    for c in 1..5 {
-        let subdomains: Vec<String> = DNSCHARS
-            .chars()
-            .permutations(c)
-            .map(|cs| cs.into_iter().collect::<String>())
-            .collect();
-
-        subdomains
-            .par_iter()
-            .map(|sd| {
-                let domain = format!("{}.aay.tw", sd);
-                let (qr, orphans) = min_orphans_for(domain.as_str());
-                (sd, qr.mask(), orphans)
-            })
-            .for_each(|(sd, qm, o)| {
-                if o < 2 {
-                    println!("{}\t{}\t{}", sd, qm.value(), o);
-                }
-            });
-    }
+    let is: Vec<usize> = (0..100000000).collect();
+    is.par_iter()
+        .map(|_| generate_domain("s3e.top", 10))
+        .map(|domain| {
+            let (qr, orphans) = min_orphans_for(domain.as_str());
+            (domain, qr.mask(), orphans)
+        })
+        .for_each(|(domain, qm, o)| {
+            if o <= 1 {
+                println!("{}\t{}\t{}", domain, qm.value(), o);
+            }
+        });
 }
