@@ -4,18 +4,16 @@ from qrcodegen import *
 
 
 def get_urls():
-    for i in range(2**5):
-        url = list('s3e.top')
+    for i in range(2**4):
+        url = list('0q4.org')
         if i & 1:
-            url[0] = 'S'
+            url[1] = 'Q'
         if i & 2:
-            url[2] = 'E'
+            url[4] = 'O'
         if i & 4:
-            url[4] = 'T'
+            url[5] = 'R'
         if i & 8:
-            url[5] = 'O'
-        if i & 16:
-            url[6] = 'P'
+            url[6] = 'G'
         yield ''.join(url)
 
 def count_full_cells(qr: QrCode):
@@ -58,5 +56,8 @@ def get_qrs():
 qrs = list(get_qrs())
 qrs.sort(key=lambda x: count_full_cells(x[2]))
 for u, m, q in qrs[:100]:
-    print(f'out/{u}_{m}.svg')
+    filename = f'out/{u}_{m}.svg'
+    with open(filename, 'w') as f:
+        f.write(to_svg_str(q, 2))
+    print(filename, count_full_cells(q))
 
